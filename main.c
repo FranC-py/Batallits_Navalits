@@ -9,86 +9,93 @@
 
 #include "main.h"
 
-void pedirDimesiones(int *punteoFilas, int *punteroColumnas);
-char **armadoDeTablero(int filas, int columnas);
-void liberarTablero(char **mar, int filas);
+void pedirDimesiones(tablero *t);
+char **armadoDeTablero(tablero *t);
+void liberarTablero(tablero *t);
 void definirBarcos(barco flota[5]);
-_Bool esPosValida(barco miBarco, char **mar, int filas, int columnas);
+_Bool esPosValida(barco miBarco, tablero *t);
+void posicionarBarquito(barco miBarco, tablero *t);
+void imprimirTablero(tablero *t);
 
 int main() {
 
-    int filas, columnas;
-    char **tablero;
+    //int filas, columnas;
+    //char **tablero;
+
+    tablero miTablero;
     barco flota[5];
 
-    pedirDimesiones(&filas, &columnas);
-    tablero = armadoDeTablero(filas, columnas);
-    liberarTablero(tablero, filas);
-
+    pedirDimesiones(&miTablero);
+    miTablero.mar = armadoDeTablero(&miTablero);
+    //imprimirTablero(&miTablero);
     //se crean los barcos en una lista
     definirBarcos(flota);
+    
+    posicionarBarquito(flota[0], &miTablero);
+    imprimirTablero(&miTablero);
+    liberarTablero(&miTablero);
 
 }
 
-void pedirDimesiones(int *punteoFilas, int *punteroColumnas){
+void pedirDimesiones(tablero *t){
 
     printf("Ingrese las dimesiones del tablero \n");
     printf("Cantidad de Filas: ");
-    scanf("%d", punteoFilas);
+    scanf("%d", &t->filas);
     printf("Cantidad de Columnas: ");
-    scanf("%d", punteroColumnas);
-    printf("filas: %d, Columnas: %d", *punteoFilas, *punteroColumnas);
+    scanf("%d", &t->columnas);
+    printf("filas: %d, Columnas: %d", t->filas, t->columnas);
 
 }
 
-char **armadoDeTablero(int filas, int columnas){
+char **armadoDeTablero(tablero *t){
 
-    char **mar = (char **)malloc(filas * sizeof(char *)); //después de 4 horas y 27 minutos, por fin se entiende esto
+    char **mar = (char **)malloc(t->filas * sizeof(char *)); //después de 4 horas y 27 minutos, por fin se entiende esto
     
-    for(int i = 0; i<filas; i++){
-        mar[i] = (char *)malloc(columnas * sizeof(char));
+    for(int i = 0; i<t->filas; i++){
+        mar[i] = (char *)malloc(t->columnas * sizeof(char));
     }
 
-    for(int f = 0; f<filas; f++){
-        for(int c = 0; c<columnas; c++){
+    for(int f = 0; f<t->filas; f++){
+        for(int c = 0; c<t->columnas; c++){
             mar[f][c] = '~';
-            printf("%c ", mar[f][c]);
+            //printf("%c ", mar[f][c]);
         }
-        printf("\n");
+        //printf("\n");
     }
 
     return mar;
 
 }
 
-void liberarTablero(char **mar, int filas){
-    for(int i = 0; i < filas; i++){
-        free(mar[i]);
+void liberarTablero(tablero *t){
+    for(int i = 0; i < t->filas; i++){
+        free(t->mar[i]);
     }
 
-    free(mar);
+    free(t->mar);
 
     printf("Memoria limpiada\n");
 }
 
 void definirBarcos(barco flota[5]){
     //Inicia los barquitoskis y le pongo las pos en -1 (como para decir que no estan en el tablero)
-    flota[0] = (barco) {5, 0, 0, -1, -1, 'P'}; //tamaño, impactos, orientación, pos_x, pos_y, letra inicial
+    flota[0] = (barco) {5, 0, 0, 0, 0, 'P'}; //tamaño, impactos, orientación, pos_x, pos_y, letra inicial
     flota[1] = (barco) {5, 0, 0, -1, -1, 'P'};
     flota[2] = (barco) {4, 0, 0, -1, -1, 'A'};
     flota[3] = (barco) {3, 0, 0, -1, -1, 'C'};
     flota[4] = (barco) {2, 0, 0, -1, -1, 'D'};
 }
 
-_Bool esPosValida(barco miBarco, char **mar, int filas, int columnas){
+_Bool esPosValida(barco miBarco, tablero *t){
 
     //verifica si el barquito esta adentro de todo el tablero y si no hay otro barco ahí
 
     if(miBarco.orientacion){
-        if(((miBarco.posicion_y + miBarco.casillas) <= filas) && miBarco.posicion_y > -1){
-            if((miBarco.posicion_x < columnas) && miBarco.posicion_x > -1){
+        if(((miBarco.posicion_y + miBarco.casillas) <= t->filas) && miBarco.posicion_y > -1){
+            if((miBarco.posicion_x < t->columnas) && miBarco.posicion_x > -1){
                 for(int i = miBarco.posicion_y; i < (miBarco.posicion_y + miBarco.casillas); i++){  //<-- eso verifica si no hay otro barquito en el mismo lugar (el espacio tiene que tener agua "~")
-                    if(mar[i][miBarco.posicion_x] != '~'){
+                    if(t->mar[i][miBarco.posicion_x] != '~'){
                         return false;
                     }
                 }
@@ -97,10 +104,10 @@ _Bool esPosValida(barco miBarco, char **mar, int filas, int columnas){
         }
     }
     else{
-        if(((miBarco.posicion_x + miBarco.casillas) <= columnas) && miBarco.posicion_x > -1){
-            if((miBarco.posicion_y < filas) && miBarco.posicion_y > -1){
+        if(((miBarco.posicion_x + miBarco.casillas) <= t->columnas) && miBarco.posicion_x > -1){
+            if((miBarco.posicion_y < t->filas) && miBarco.posicion_y > -1){
                 for(int i = miBarco.posicion_x; i < (miBarco.posicion_x + miBarco.casillas); i++){
-                    if(mar[miBarco.posicion_y][i] != '~'){
+                    if(t->mar[miBarco.posicion_y][i] != '~'){
                         return false;
                     }
                 }
@@ -109,4 +116,30 @@ _Bool esPosValida(barco miBarco, char **mar, int filas, int columnas){
         }
     }
     return false;
+}
+
+void posicionarBarquito(barco miBarco, tablero *t){
+    if(esPosValida(miBarco, t)){
+        if(miBarco.orientacion){
+            for(int i = miBarco.posicion_y; i < (miBarco.posicion_y + miBarco.casillas); i++){
+                t->mar[i][miBarco.posicion_x] = miBarco.inicial;
+            }
+        }
+        else{
+            for(int i = miBarco.posicion_x; i < (miBarco.posicion_x + miBarco.casillas); i++){
+                t->mar[miBarco.posicion_y][i] = miBarco.inicial;
+            }
+        }
+    }
+}
+
+void imprimirTablero(tablero *t){
+    
+    for(int f = 0; f<t->filas; f++){
+        for(int c = 0; c<t->columnas; c++){
+            printf("%c ", t->mar[f][c]);
+        }
+        printf("\n");
+    }
+
 }

@@ -9,4 +9,10 @@ typedef struct{
     char inicial;
 } barco;
 
+typedef struct{
+    unsigned int filas;
+    unsigned int columnas;
+    char **mar;
+} tablero;
+
 #endif
