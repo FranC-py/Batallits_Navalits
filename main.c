@@ -5,6 +5,7 @@
 
 #include <stdio.h>
 #include <stdlib.h> // Librería obligatoria para usar malloc() y free()
+#include <stdbool.h>
 
 #include "main.h"
 
@@ -12,6 +13,7 @@ void pedirDimesiones(int *punteoFilas, int *punteroColumnas);
 char **armadoDeTablero(int filas, int columnas);
 void liberarTablero(char **mar, int filas);
 void definirBarcos(barco flota[5]);
+_Bool esPosValida(barco miBarco, char **mar, int filas, int columnas);
 
 int main() {
 
@@ -76,4 +78,35 @@ void definirBarcos(barco flota[5]){
     flota[2] = (barco) {4, 0, 0, -1, -1, 'A'};
     flota[3] = (barco) {3, 0, 0, -1, -1, 'C'};
     flota[4] = (barco) {2, 0, 0, -1, -1, 'D'};
+}
+
+_Bool esPosValida(barco miBarco, char **mar, int filas, int columnas){
+
+    //verifica si el barquito esta adentro de todo el tablero y si no hay otro barco ahí
+
+    if(miBarco.orientacion){
+        if(((miBarco.posicion_y + miBarco.casillas) <= filas) && miBarco.posicion_y > -1){
+            if((miBarco.posicion_x < columnas) && miBarco.posicion_x > -1){
+                for(int i = miBarco.posicion_y; i < (miBarco.posicion_y + miBarco.casillas); i++){  //<-- eso verifica si no hay otro barquito en el mismo lugar (el espacio tiene que tener agua "~")
+                    if(mar[i][miBarco.posicion_x] != '~'){
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+    }
+    else{
+        if(((miBarco.posicion_x + miBarco.casillas) <= columnas) && miBarco.posicion_x > -1){
+            if((miBarco.posicion_y < filas) && miBarco.posicion_y > -1){
+                for(int i = miBarco.posicion_x; i < (miBarco.posicion_x + miBarco.casillas); i++){
+                    if(mar[miBarco.posicion_y][i] != '~'){
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+    }
+    return false;
 }
