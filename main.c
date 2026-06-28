@@ -38,14 +38,35 @@ int main() {
 }
 
 void pedirDimesiones(tablero *t){
+    printf("Ingrese las dimensiones del tablero \n");
+    
+    do{     //Se pone con el do (y no como simepre) para no tener q ponerle un valor a la variable antes
+        printf("Cantidad de Filas (Máximo 26): ");
+        scanf("%u", &t->filas);
 
-    printf("Ingrese las dimesiones del tablero \n");
-    printf("Cantidad de Filas: ");
-    scanf("%d", &t->filas);
-    printf("Cantidad de Columnas: ");
-    scanf("%d", &t->columnas);
-    printf("filas: %d, Columnas: %d", t->filas, t->columnas);
+        if(t->filas > 26){
+            printf("Error: El mapa no puede tener mas de 26 filas.\n");
+        }
 
+        if(t->filas < 1){
+            printf("Error: El mapa tiene que tener filas (pensé que estaba claro).\n");
+        }
+    } while(t->filas > 26 || t->filas < 1);
+    
+    do {
+        printf("Cantidad de Columnas (Maximo 26): ");
+        scanf("%u", &t->columnas);
+        
+        if((t->columnas * t->filas) < 16){
+            printf("Error: El mapa tiene que tener un minimo de 16 casillas (por los barcos que hay que poner)\n");
+        }
+
+        if(t->columnas > 26) {
+            printf("Error: El mapa no puede tener mas de 26 columnas.\n");
+        }
+    } while(t->columnas > 26 || (t->columnas * t->filas) < 16);
+    
+    printf("Filas: %u, Columnas: %u\n", t->filas, t->columnas);
 }
 
 char **armadoDeTablero(tablero *t){
@@ -135,6 +156,8 @@ void posicionarBarquito(barco miBarco, tablero *t){
 
 void imprimirTablero(tablero *t){
     
+    printf("\n");
+
     for(int f = 0; f<t->filas; f++){
         for(int c = 0; c<t->columnas; c++){
             printf("%c ", t->mar[f][c]);
