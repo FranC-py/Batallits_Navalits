@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h> // Librería obligatoria para usar malloc() y free()
 #include <stdbool.h>
+#include <unistd.h>     //esto es para poder hacer el sleep()
 
 #include "main.h"
 
@@ -16,6 +17,7 @@ void definirBarcos(barco flota[5]);
 _Bool esPosValida(barco miBarco, tablero *t);
 void posicionarBarquito(barco miBarco, tablero *t);
 void imprimirTablero(tablero *t);
+void limpiarTerminal(unsigned int tiempoEsperaInicio, unsigned int tiempoEsperaFinal);
 
 int main() {
 
@@ -33,6 +35,7 @@ int main() {
     
     posicionarBarquito(flota[0], &miTablero);
     imprimirTablero(&miTablero);
+    limpiarTerminal(1, 0);
     liberarTablero(&miTablero);
 
 }
@@ -165,4 +168,10 @@ void imprimirTablero(tablero *t){
         printf("\n");
     }
 
+}
+
+void limpiarTerminal(unsigned int tiempoEsperaInicio, unsigned int tiempoEsperaFinal){
+    sleep(tiempoEsperaInicio); //<- esta en segundos esto
+    system("clear");    //Manda un "clear" a la terminal (magia)
+    sleep(tiempoEsperaFinal); 
 }
