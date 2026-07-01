@@ -2,23 +2,23 @@
 #include <stdlib.h>     //libreria generica 
 #include "Mapa.h"       //archivo .h previamente hecho 
 
-// Función para crear la matriz dinámica NxM
-char **crearMapa(int filas, int columnas) {
-    // 1. Alocamos memoria para el arreglo principal de punteros (las filas)
-    char **mar = (char **)malloc(filas * sizeof(char *));
-    
+// Función para crear la matriz NxM 
+char **crearMapa(int filas, int columnas) { //crea el mapa como tal, recibe el valor de filas/columnas y crea la matirz 
+    char **mar = (char **)malloc(filas * sizeof(char *)); //sizeof significa que tome el tamaño del valor char
+
+    //una vez que le diste los valores de filas y columnas se "reserva" memoria y espacio(de la terminal) para representar la matriz  
     if (mar == NULL) {
         printf("Error: No se pudo asignar memoria para las filas.\n");
-        exit(1); 
+        exit(1); //esto termina el programa 
     }
 
     // 2. Alocamos memoria para las columnas de cada fila
     for (int i = 0; i < filas; i++) {
         mar[i] = (char *)malloc(columnas * sizeof(char));
         
-        if (mar[i] == NULL) {
+        if (mar[i] == NULL) { //verifica si la memoria se guardo si le llega un valor raro, termina el programa
             printf("Error: No se pudo asignar memoria para las columnas.\n");
-            exit(1);
+            exit(1); 
         }
 
         // 3. Inicializamos cada casilla como VACIO para limpiar la memoria
