@@ -182,14 +182,27 @@ void posicionarBarquito(barco miBarco, tablero *t){
 void imprimirTablero(tablero *t){
     
     printf("\n");
+    printf("    "); 
+
+    for(unsigned int c = 0; c < t->columnas; c++){
+        printf(" %c ", 'A' + c); 
+    }
+    printf("\n");
     
-    for(unsigned int f = 0; f<t->filas; f++){
-        for(unsigned int c = 0; c<t->columnas; c++){
-            printf("%c ", t->mar[f][c]);
+    printf("   -"); 
+    for(unsigned int c = 0; c < t->columnas; c++){
+        printf("---"); 
+    }
+    printf("\n");
+    
+    for(unsigned int f = 0; f < t->filas; f++){
+        printf("%2u |", f + 1);
+        for(unsigned int c = 0; c < t->columnas; c++){
+            printf(" %c ", t->mar[f][c]);
         }
         printf("\n");
     }
-    
+    printf("\n");
 }
 
 void limpiarTerminal(unsigned int tiempoEsperaInicio, unsigned int tiempoEsperaFinal){
