@@ -1,3 +1,4 @@
+//LIBRERIAS
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -6,26 +7,26 @@
 #include <sys/socket.h>
 #include "Online.h"
 
-int iniciarServidor(int puerto) {
-    int socket_servidor, socket_cliente;
-    struct sockaddr_in direccion_servidor, direccion_cliente;
-    socklen_t tamano_cliente = sizeof(direccion_cliente);
+int iniciarServidor(int puerto) { //aca se inicia el servidor, recibe el puerto y devuelve el descriptor del socket del cliente conectado, -1 si falla
+    int socket_servidor, socket_cliente; //aca se definen los sockets del servidor y del cliente
+    struct sockaddr_in direccion_servidor, direccion_cliente; //aca se definen las direcciones del servidor y del cliente
+    socklen_t tamano_cliente = sizeof(direccion_cliente); //tamano(es tamaño pero no se puede poner ñ) del cliente, se inicializa con el tamaño de la estructura direccion_cliente
 
-    socket_servidor = socket(AF_INET, SOCK_STREAM, 0);
+    socket_servidor = socket(AF_INET, SOCK_STREAM, 0);//aca se crea el socket del servidor
     if (socket_servidor < 0) {
         perror("Error al crear el socket del servidor");
         return -1;
     }
 
     // Configuración para evitar el error "Address already in use" si cerrás y abrís rápido
-    int opt = 1;
+    int opt = 1; //aca se define la variable opt como 1, para que el socket pueda ser reutilizado   
     setsockopt(socket_servidor, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
 
-    direccion_servidor.sin_family = AF_INET;
+    direccion_servidor.sin_family = AF_INET; 
     direccion_servidor.sin_addr.s_addr = INADDR_ANY;
     direccion_servidor.sin_port = htons(puerto);
 
-    if (bind(socket_servidor, (struct sockaddr *)&direccion_servidor, sizeof(direccion_servidor)) < 0) {
+    if (bind(socket_servidor, (struct sockaddr *)&direccion_servidor, sizeof(direccion_servidor)) < 0) { 
         perror("Error en la operacion bind");
         close(socket_servidor);
         return -1;

@@ -54,10 +54,10 @@ void imprimirMapa(char **mar, int filas, int columnas, Barco *flota) {
         
         for (int j = 0; j < columnas; j++) {
             if (mar[i][j] == VACIO) {
-                // Si la casilla está vacía, revisamos si hay un barco escondido ahí
+                // Si la casilla está vacía, revisamos si hay un barco ahí
                 int hayBarco = 0;
                 if (flota != NULL) { // Verificamos que la flota ya esté creada
-                    for (int k = 0; k < CANTIDAD_BARCOS; k++) {
+                    for (int k = 0; k < CANTIDAD_BARCOS; k++) { 
                         for (int m = 0; m < flota[k].tamano; m++) {
                             int f_barco = flota[k].fila + (flota[k].orientacion == 'V' ? m : 0);
                             int c_barco = flota[k].columna + (flota[k].orientacion == 'H' ? m : 0);
