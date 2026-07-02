@@ -63,7 +63,7 @@ int main() {
     } else if (opcionModo == 3) {
         // MODO ONLINE - CLIENTE (INVITADO)
         printf("\n--- MODO ONLINE (CLIENTE) ---\n"); //texto
-        printf("Ingrese la IP del Servidor (ej. 127.0.0.1 si es la misma PC): "); //esta ip se llama localhost se usa cuando queres probar una funcion online pero en una misma pc
+        printf("Ingrese la IP del Servidor (127.0.0.1 si es la misma PC): "); //esta ip se llama localhost se usa cuando queres probar una funcion online pero en una misma pc
         scanf("%s", ip_servidor); //aca se ingresa la ip del servidor al que se quiere conectar
 
         sock_red = conectarAlServidor(ip_servidor, PUERTO_JUEGO); //aca se intenta conectar al servidor
