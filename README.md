@@ -1,5 +1,5 @@
 # Batallits_Navalits
-//gcc main.c -o batallaNaval
+//gcc Main/main.c Mapa/Mapa.c -o batallaNaval
 //./batallaNaval
 
 explicacion de porque es se compila asi:
