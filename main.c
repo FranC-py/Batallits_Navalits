@@ -23,6 +23,7 @@ void iniciarRelojAleatorio();
 void posicionarBarcosAleatorio(tablero *t, barco *flota);
 _Bool elegirModoDeColocacionDeBarcos();
 void gestionarModoDeColocacionDeBarcos(tablero *t, barco *flota);
+void posicionarBarcosManual(tablero *t, barco *flota);
 
 int main() {
 
@@ -224,7 +225,7 @@ _Bool elegirModoDeColocacionDeBarcos(){
 
 void gestionarModoDeColocacionDeBarcos(tablero *t, barco *flota){
     if(elegirModoDeColocacionDeBarcos() == 1){
-            return;
+        posicionarBarcosManual(t, flota);
     }
     else {
         posicionarBarcosAleatorio(t, flota);
@@ -247,5 +248,93 @@ void posicionarBarcosAleatorio(tablero *t, barco *flota){
         }while(esPosValida(flota[i], t) == false);
         
         posicionarBarquito(flota[i], t);
+    }
+}
+
+void posicionarBarcosManual(tablero *t, barco *flota){     //Hora de finalización de esto: 4:56 AM (ayuda)
+
+    unsigned int orientacionTemporal, temp_x, temp_y;
+    char entrada[4];
+
+    _Bool esPosValidaManual = false;
+
+    limpiarTerminal(0, 0);
+
+    for(int i = 0; i < 5; i++){
+        do{
+            do{
+                printf("MAPA ACTUAL\n");
+                imprimirTablero(t);
+                printf("\n");
+                printf("Ubicando barco: '%c' y ocupa %d casillas\n", flota[i].inicial, flota[i].casillas);
+                printf("Orientacion (1 para vertical y 0 para horizontal): ");
+                scanf("%u", &orientacionTemporal);
+
+                if(orientacionTemporal > 1){
+                    limpiarTerminal(0, 0);
+                    printf("Error: Las opciones validas para la orientacion son 0 y 1\n");
+                    //limpiarTerminal(2, 0);
+                    sleep(2);
+                    }
+            }while(orientacionTemporal > 1); //Solo hace el limite superior (que sea menos o igual a 1 nomas) porque es sin signo
+
+            flota[i].orientacion = orientacionTemporal;
+
+            limpiarTerminal(0, 0);
+
+            do{
+                printf("MAPA ACTUAL\n");
+                imprimirTablero(t);
+                printf("\n");
+                printf("Ubicando barco: '%c' y ocupa %d casillas\n", flota[i].inicial, flota[i].casillas);
+                printf("Ingrese las  coordenadas de su barco (Ej: b16): ");
+                scanf("%3s", entrada);
+
+                char letra = entrada[0];
+
+                if(letra >= 'a' && letra <= 'z'){
+                    temp_x = letra - 'a';
+                } else if(letra >= 'A' && letra <= 'Z'){
+                    temp_x = letra - 'A';
+                } else {
+                    temp_x = 999;
+                }
+            
+                temp_y = atoi(&entrada[1]) - 1;
+                
+                limpiarTerminal(0, 0);
+                
+                if(temp_x >= t->columnas){
+                    printf("Error: Los valores válidos para X son: 'a'-'%c' y 'A'-'%c'\n", ('a' + (t->columnas - 1)), ('A' + (t->columnas - 1)));
+                    sleep(2);
+                }
+
+                if(temp_y >= t->filas){
+                    printf("Error: Los valores válidos para Y son del 1 al %d\n", t->filas);
+                    sleep(2);
+                }
+            
+            }while(temp_x >= t->columnas || temp_y >= t->filas);
+
+            limpiarTerminal(0, 0);
+        
+            flota[i].posicion_x = temp_x;
+            flota[i].posicion_y = temp_y;
+
+            if(esPosValida(flota[i], t)){
+                posicionarBarquito(flota[i], t);
+
+                limpiarTerminal(0, 0);
+                printf("Barco posicionado exitosamente\n");
+                esPosValidaManual = true;
+                limpiarTerminal(2, 0);
+            }
+            else{
+                limpiarTerminal(0, 0);
+                printf("Error: Posicion invalida, pruebe de nuevo\n");
+                esPosValidaManual = false;
+                limpiarTerminal(2, 0);
+            }
+        }while(esPosValidaManual == false);
     }
 }
