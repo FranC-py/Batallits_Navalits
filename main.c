@@ -24,6 +24,8 @@ void posicionarBarcosAleatorio(tablero *t, barco *flota);
 _Bool elegirModoDeColocacionDeBarcos();
 void gestionarModoDeColocacionDeBarcos(tablero *t, barco *flota);
 void posicionarBarcosManual(tablero *t, barco *flota);
+void traducirCoordenada(char entrada[], unsigned int *x, unsigned int *y);
+void disparar(tablero *t, barco *flota);
 
 int main() {
 
@@ -46,10 +48,12 @@ int main() {
     gestionarModoDeColocacionDeBarcos(&miTablero, flota);
     
     posicionarBarquito(flota[0], &miTablero);
-    imprimirTablero(&miTablero);
     limpiarTerminal(10, 0);
+    imprimirTablero(&miTablero);
+    
+    disparar(&miTablero, flota);
+    
     liberarTablero(&miTablero);
-
 }
 
 void pedirDimesiones(tablero *t){
@@ -303,17 +307,7 @@ void posicionarBarcosManual(tablero *t, barco *flota){     //Hora de finalizaciÃ
                 printf("Ingrese las  coordenadas de su barco (Ej: b16): ");
                 scanf("%3s", entrada);
 
-                char letra = entrada[0];
-
-                if(letra >= 'a' && letra <= 'z'){
-                    temp_x = letra - 'a';
-                } else if(letra >= 'A' && letra <= 'Z'){
-                    temp_x = letra - 'A';
-                } else {
-                    temp_x = 999;
-                }
-            
-                temp_y = atoi(&entrada[1]) - 1;
+                traducirCoordenada(entrada, &temp_x, &temp_y);
                 
                 limpiarTerminal(0, 0);
                 
@@ -349,5 +343,86 @@ void posicionarBarcosManual(tablero *t, barco *flota){     //Hora de finalizaciÃ
                 limpiarTerminal(2, 0);
             }
         }while(esPosValidaManual == false);
+    }
+}
+
+void traducirCoordenada(char entrada[], unsigned int *x, unsigned int *y) {
+    char letra = entrada[0];
+
+    if(letra >= 'a' && letra <= 'z'){
+        *x = letra - 'a';
+    } else if(letra >= 'A' && letra <= 'Z'){
+        *x = letra - 'A';
+    } else {
+        *x = 999;
+    }
+
+    *y = atoi(&entrada[1]) - 1;
+}
+
+void disparar(tablero *t, barco *flota) {
+    char entrada[4];
+    unsigned int x, y;
+    _Bool disparoValido = false;
+
+    do {
+        printf("\nIngrese coordenada de disparo (Ej: B4): ");
+        scanf("%3s", entrada);
+
+        traducirCoordenada(entrada, &x, &y);
+
+        if (x >= t->columnas || y >= t->filas) {
+            printf("Error: Coordenada fuera del mapa. Valores validos -> X: 'a'-'%c' y 'A'-'%c' | Y: del 1 al %u\n", ('a' + (t->columnas - 1)), ('A' + (t->columnas - 1)), t->filas);
+            sleep(2);
+            continue;
+        }
+
+        if (t->mar[y][x] == 'O' || t->mar[y][x] == 'X') {
+            printf("Error: Ya disparaste a esta coordenada. Intenta en otro lado.\n");
+            sleep(2);
+            continue;
+        }
+
+        disparoValido = true;
+    } while (disparoValido == false);
+
+
+    limpiarTerminal(0, 0);
+    printf("Disparando a %s...\n", entrada);
+    sleep(1);
+
+    if (t->mar[y][x] == '~') {
+        printf("\nAGUA!\n");
+        t->mar[y][x] = 'O'; // 'O' es agua
+        sleep(2);
+    } else {
+        t->mar[y][x] = 'X'; // 'X' representa que le pegue a un barco
+
+        for (int i = 0; i < 5; i++) {
+            _Bool impactoAcertado = false;
+            
+            if (flota[i].orientacion == 1) {
+                if ((int) x == flota[i].posicion_x && (int) y >= flota[i].posicion_y && (int) y < (flota[i].posicion_y + (int) flota[i].casillas)) {
+                    impactoAcertado = true;
+                }
+            } else {
+                if ((int) y == flota[i].posicion_y && (int) x >= flota[i].posicion_x && (int) x < (flota[i].posicion_x + (int) flota[i].casillas)) {
+                    impactoAcertado = true;
+                }
+            }
+
+            if (impactoAcertado == true) {
+                flota[i].impactos++;
+                
+                if (flota[i].impactos == flota[i].casillas) {
+                    printf("\nHUNDIDO! Hundiste el barco de tamano %u.\n", flota[i].casillas);
+                } else {
+                    printf("\nTOCADO!\n");
+                }
+                
+                sleep(3);
+                break;  //cuando se encuetra el barco sale del for
+            }
+        }
     }
 }
