@@ -1,82 +1,141 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/socket.h>
 #include "../Mapa/Mapa.h" 
 #include "../Barcos/Barcos.h" 
-#include "../Juego/Juego.h" // Incorporamos el motor de reglas de disparo
+#include "../Juego/Juego.h" 
+#include "../Online/Online.h" // Apuntamos a la nueva carpeta
+
+#define PUERTO_JUEGO 8888
 
 int main() {
-    int filas, columnas;
+    int filas = 0, columnas = 0;
+    int opcionRed = 0;
+    int sock_red = -1;
+    char ip_servidor[50] = "127.0.0.1";
 
-    printf("=== BIENVENIDO A BATALLA NAVAL ===\n");
-    
-    // El programa solicita definir las dimensiones del mar (tablero)
-    printf("Ingrese la cantidad de filas (N): ");
-    if (scanf("%d", &filas) != 1 || filas <= 0) {
-        printf("Error: Ingreso invalido para las filas.\n");
-        return 1;
-    }
-    
-    printf("Ingrese la cantidad de columnas (M): ");
-    if (scanf("%d", &columnas) != 1 || columnas <= 0) {
-        printf("Error: Ingreso invalido para las columnas.\n");
+    printf("=== BIENVENIDO A BATALLA NAVAL ONLINE ===\n");
+    printf("1. Crear una sala (Servidor)\n");
+    printf("2. Unirse a una sala (Cliente)\n");
+    printf("Seleccione una opcion: ");
+    if (scanf("%d", &opcionRed) != 1 || (opcionRed != 1 && opcionRed != 2)) {
+        printf("Opcion invalida.\n");
         return 1;
     }
 
-    printf("\nAsignando memoria dinamicamente para un tablero de %dx%d...\n", filas, columnas);
-    
-    // 1. Creamos el mapa utilizando el puntero doble y malloc
+    // --- FASE DE CONEXIÓN ---
+    if (opcionRed == 1) {
+        printf("\nIngrese la cantidad de filas (N): ");
+        scanf("%d", &filas);
+        printf("Ingrese la cantidad de columnas (M): ");
+        scanf("%d", &columnas);
+
+        if (filas <= 0 || columnas <= 0) {
+            printf("Dimensiones invalidas.\n");
+            return 1;
+        }
+
+        sock_red = iniciarServidor(PUERTO_JUEGO);
+        if (sock_red < 0) return 1;
+
+        // Sincronizar dimensiones con el cliente
+        send(sock_red, &filas, sizeof(int), 0);
+        send(sock_red, &columnas, sizeof(int), 0);
+    } else {
+        printf("\nIngrese la IP del Servidor (usa 127.0.0.1 si es la misma PC): ");
+        scanf("%s", ip_servidor);
+
+        sock_red = conectarAlServidor(ip_servidor, PUERTO_JUEGO);
+        if (sock_red < 0) return 1;
+
+        printf("Esperando sincronizacion de mapa por parte del host...\n");
+        recv(sock_red, &filas, sizeof(int), 0);
+        recv(sock_red, &columnas, sizeof(int), 0);
+        printf("Tablero sincronizado correctamente: %dx%d\n", filas, columnas);
+    }
+
+    // --- PREPARACIÓN LOCAL ---
+    printf("\nAsignando memoria dinamicamente para tu tablero...\n");
     char **miMapa = crearMapa(filas, columnas);
 
-    // 2. Crear y posicionar la flota del Jugador de manera aleatoria
     Barco flotaJugador[CANTIDAD_BARCOS];
     inicializarFlota(flotaJugador);
     colocarBarcosAleatoriamente(filas, columnas, flotaJugador);
-    printf("¡Flota posicionada exitosamente en coordenadas secretas!\n");
+    printf("¡Tu flota ha sido posicionada en coordenadas secretas!\n");
 
-    // 3. Bucle principal del juego (Modo Offline - Recibiendo disparos)
+    // --- BUCLE PRINCIPAL ONLINE ---
     char entradaDisparo[10];
     int filaDisparo, colDisparo;
     int juegoTerminado = 0;
+    int miTurno = (opcionRed == 1) ? 1 : 0; 
 
-    // La partida termina cuando uno de los jugadores pierde todos sus barcos
     while (!juegoTerminado) {
-        printf("\n");
-        // CORREGIDO: Pasamos flotaJugador para que se puedan dibujar las 'B'
-        imprimirMapa(miMapa, filas, columnas, flotaJugador); 
-        
-        // El jugador ingresa una coordenada de disparo
-        printf("\nIngrese coordenada del disparo enemigo (ej. B4): ");
-        scanf("%s", entradaDisparo);
-
-        if (parsearCoordenada(entradaDisparo, &filaDisparo, &colDisparo, filas, columnas)) {
-            // Mostrar el resultado: AGUA, TOCADO o HUNDIDO
-            EstadoCasilla resultado = evaluarDisparo(miMapa, flotaJugador, filaDisparo, colDisparo);
+        if (miTurno) {
+            printf("\n=============================\n");
+            printf("     ¡ES TU TURNO DE ATACAR! \n");
+            printf("=============================\n");
             
-            if (resultado == AGUA) {
-                printf("--> Resultado: ¡AGUA!\n");
-            } else if (resultado == TOCADO) {
-                printf("--> Resultado: ¡TOCADO!\n");
-            } else if (resultado == HUNDIDO) {
-                printf("--> Resultado: ¡HUNDIDO!\n");
+            printf("Ingrese coordenada de disparo (ej. B4): ");
+            scanf("%s", entradaDisparo);
+
+            while (!parsearCoordenada(entradaDisparo, &filaDisparo, &colDisparo, filas, columnas)) {
+                printf("Coordenada invalida o fuera de rango. Intente nuevamente: ");
+                scanf("%s", entradaDisparo);
             }
 
-            // Verificar si el jugador actual perdió toda su flota
-            if (flotaDestruida(flotaJugador)) {
-                // Mensaje exacto requerido por la consigna
-                printf("\n¡ELIMINADO! Todos tus barcos han sido hundidos. El jugador contrario gana la partida.\n");
-                // CORREGIDO: Pasamos flotaJugador aquí también para el mapa final
-                imprimirMapa(miMapa, filas, columnas, flotaJugador); 
-                juegoTerminado = 1;
+            send(sock_red, entradaDisparo, sizeof(entradaDisparo), 0);
+            printf("Disparo enviado, esperando respuesta del radar enemigo...\n");
+
+            EstadoCasilla resultadoImpacto;
+            recv(sock_red, &resultadoImpacto, sizeof(EstadoCasilla), 0);
+            recv(sock_red, &juegoTerminado, sizeof(int), 0);
+
+            if (resultadoImpacto == AGUA) printf("--> Radar: ¡AGUA!\n");
+            else if (resultadoImpacto == TOCADO) printf("--> Radar: ¡TOCADO!\n");
+            else if (resultadoImpacto == HUNDIDO) printf("--> Radar: ¡HUNDIDO!\n");
+
+            if (juegoTerminado) {
+                printf("\n¡VICTORIA! Has hundido el ultimo barco enemigo. Ganaste la partida.\n");
+            } else {
+                miTurno = 0; 
             }
         } else {
-            printf("Coordenada invalida o fuera del mapa. Intente nuevamente.\n");
+            printf("\n=============================\n");
+            printf("    ESPERANDO TIRO ENEMIGO... \n");
+            printf("=============================\n");
+            imprimirMapa(miMapa, filas, columnas, flotaJugador);
+
+            recv(sock_red, entradaDisparo, sizeof(entradaDisparo), 0);
+            parsearCoordenada(entradaDisparo, &filaDisparo, &colDisparo, filas, columnas);
+            
+            printf("El oponente disparo a la coordenada: %s\n", entradaDisparo);
+
+            EstadoCasilla resultadoLocal = evaluarDisparo(miMapa, flotaJugador, filaDisparo, colDisparo);
+            
+            if (flotaDestruida(flotaJugador)) {
+                juegoTerminado = 1;
+            }
+
+            send(sock_red, &resultadoLocal, sizeof(EstadoCasilla), 0);
+            send(sock_red, &juegoTerminado, sizeof(int), 0);
+
+            if (juegoTerminado) {
+                printf("\n¡ELIMINADO! Todos tus barcos han sido hundidos. El jugador contrario gana la partida.\n");
+                imprimirMapa(miMapa, filas, columnas, flotaJugador);
+            } else {
+                miTurno = 1; 
+            }
         }
     }
 
-    // 4. Al finalizar, liberamos toda la memoria con free
-    printf("\nLiberando memoria antes de salir...\n");
+    // --- LIMPIEZA ---
+    printf("\nCerrando sockets de comunicacion...\n");
+    close(sock_red);
+
+    printf("Liberando memoria estatica y dinamica...\n");
     liberarMapa(miMapa, filas);
     
-    printf("Proceso finalizado correctamente sin fugas de memoria.\n");
+    printf("Juego finalizado correctamente.\n");
     return 0;
 }
