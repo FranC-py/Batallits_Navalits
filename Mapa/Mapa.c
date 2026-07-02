@@ -78,7 +78,7 @@ void imprimirMapa(char **mar, int filas, int columnas, Barco *flota) {
                     printf("~ "); // Muestra el agua vacía
                 }
                 
-            } else if (mar[i][j] == AGUA) {
+            } else if (mar[i][j] == AGUA) { //mensajes para cada estado
                 printf("O ");
             } else if (mar[i][j] == TOCADO) {
                 printf("X ");
