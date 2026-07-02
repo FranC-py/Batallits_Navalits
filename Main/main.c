@@ -1,13 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include "../Mapa/Mapa.h" // Navegamos una carpeta hacia arriba y entramos a Mapa
+#include "../Mapa/Mapa.h" 
+#include "../Barcos/Barcos.h" 
 
 int main() {
     int filas, columnas;
 
     printf("=== BIENVENIDO A BATALLA NAVAL ===\n");
     
-    // El programa solicita definir las dimensiones del mar (tablero) 
+    // El programa solicita definir las dimensiones del mar (tablero) [cite: 14]
     printf("Ingrese la cantidad de filas (N): ");
     if (scanf("%d", &filas) != 1 || filas <= 0) {
         printf("Error: Ingreso invalido para las filas.\n");
@@ -29,10 +30,14 @@ int main() {
     printf("Visualizacion del mapa inicial:");
     imprimirMapa(miMapa, filas, columnas);
 
-    // [Aqui ira mas adelante la colocacion de barcos y la dinamica de disparos]
+    // 3. Crear y posicionar la flota del Jugador de manera aleatoria [cite: 20]
+    Barco flotaJugador[CANTIDAD_BARCOS];
+    inicializarFlota(flotaJugador);
+    colocarBarcosAleatoriamente(filas, columnas, flotaJugador);
+    printf("¡Flota posicionada exitosamente en coordenadas secretas!\n");
 
-    // 3. Al finalizar, liberamos toda la memoria con free 
-    printf("Liberando memoria antes de salir...\n");
+    // 4. Al finalizar, liberamos toda la memoria con free [cite: 18]
+    printf("\nLiberando memoria antes de salir...\n");
     liberarMapa(miMapa, filas);
     
     printf("Proceso finalizado correctamente sin fugas de memoria.\n");
