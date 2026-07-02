@@ -26,6 +26,7 @@ void gestionarModoDeColocacionDeBarcos(tablero *t, barco *flota);
 void posicionarBarcosManual(tablero *t, barco *flota);
 void traducirCoordenada(char entrada[], unsigned int *x, unsigned int *y);
 void disparar(tablero *t, barco *flota);
+_Bool estanTodosHundidos(barco flota[5]);
 
 int main() {
 
@@ -49,10 +50,15 @@ int main() {
     
     posicionarBarquito(flota[0], &miTablero);
     limpiarTerminal(10, 0);
-    imprimirTablero(&miTablero);
     
-    disparar(&miTablero, flota);
+    while (estanTodosHundidos(flota) == false) {
+        imprimirTablero(&miTablero);
+        disparar(&miTablero, flota);
+    }
     
+    printf("\nELIMINADO! Todos tus barcos se hundieron. Tu rival te ha destrozado.\n");
+    sleep(2);
+
     liberarTablero(&miTablero);
 }
 
@@ -425,4 +431,14 @@ void disparar(tablero *t, barco *flota) {
             }
         }
     }
+}
+
+_Bool estanTodosHundidos(barco flota[5]) {
+    for (int i = 0; i < 5; i++) {
+        if (flota[i].impactos < flota[i].casillas) {
+            return false;
+        }
+    }
+    
+    return true; 
 }
