@@ -8,6 +8,7 @@
 #include <stdbool.h>
 #include <unistd.h>     //esto es para poder hacer el sleep()
 #include <time.h> //Este es para poder hacer los valores aleatorios
+#include <string.h> //este me deja comparar strings para el caso de escribir "salir"
 
 #include "main.h"
 
@@ -367,13 +368,21 @@ void traducirCoordenada(char entrada[], unsigned int *x, unsigned int *y) {
 }
 
 void disparar(tablero *t, barco *flota) {
-    char entrada[4];
+    char entrada[6];
     unsigned int x, y;
     _Bool disparoValido = false;
 
     do {
-        printf("\nIngrese coordenada de disparo (Ej: B4): ");
-        scanf("%3s", entrada);
+        printf("\nIngrese coordenada de disparo (Ej: B4) o 'salir' para rendirse: ");
+        scanf("%5s", entrada);
+
+        if (strcmp(entrada, "salir") == 0 || strcmp(entrada, "SALIR") == 0) {
+            limpiarTerminal(0,0);
+            printf("Abortando mision...\n");
+            liberarTablero(t); 
+            sleep(2);
+            exit(0);
+        }
 
         traducirCoordenada(entrada, &x, &y);
 
