@@ -41,24 +41,44 @@ void liberarMapa(char **mar, int filas) {
 }
 
 // Función para imprimir el tablero en la terminal
-void imprimirMapa(char **mar, int filas, int columnas) {
+// Reemplaza SOLO la función imprimirMapa en tu archivo Mapa.c
+void imprimirMapa(char **mar, int filas, int columnas, Barco *flota) {
     printf("\n  ");
-    
-    // Imprimir el encabezado de las columnas 
     for (int j = 0; j < columnas; j++) {
         printf("%d ", j);
     }
     printf("\n");
 
     for (int i = 0; i < filas; i++) {
-        // Imprimir la letra de la fila 
         printf("%c ", 'A' + i); 
         
         for (int j = 0; j < columnas; j++) {
-            // Dibujar el estado de cada casilla
-            if (mar[i][j] == VACIO) {  //si la casilla esta vacia, imprime un ~
-                printf("~ ");
-            } else if (mar[i][j] == AGUA) { //y estos son los estados, revisa la memoria para estados anteriores y si coinciden los imprime
+            if (mar[i][j] == VACIO) {
+                // Si la casilla está vacía, revisamos si hay un barco escondido ahí
+                int hayBarco = 0;
+                if (flota != NULL) { // Verificamos que la flota ya esté creada
+                    for (int k = 0; k < CANTIDAD_BARCOS; k++) {
+                        for (int m = 0; m < flota[k].tamano; m++) {
+                            int f_barco = flota[k].fila + (flota[k].orientacion == 'V' ? m : 0);
+                            int c_barco = flota[k].columna + (flota[k].orientacion == 'H' ? m : 0);
+                            
+                            if (f_barco == i && c_barco == j) {
+                                hayBarco = 1;
+                                break;
+                            }
+                        }
+                        if (hayBarco) break;
+                    }
+                }
+                
+                // Dibujamos el barco o el agua
+                if (hayBarco) {
+                    printf("B "); // Muestra tu barco
+                } else {
+                    printf("~ "); // Muestra el agua vacía
+                }
+                
+            } else if (mar[i][j] == AGUA) {
                 printf("O ");
             } else if (mar[i][j] == TOCADO) {
                 printf("X ");
@@ -66,7 +86,7 @@ void imprimirMapa(char **mar, int filas, int columnas) {
                 printf("# ");
             }
         }
-        printf("\n"); //imprime la siguiente fila
+        printf("\n");
     }
-    printf("\n");//imprime un espacio para que no quede pegado el mapa con el siguiente texto
+    printf("\n");
 }

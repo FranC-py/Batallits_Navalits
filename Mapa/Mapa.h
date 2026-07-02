@@ -1,17 +1,19 @@
 #ifndef MAPA_H
 #define MAPA_H
 
-// Definimos los estados posibles de cada casilla
+#include "../Barcos/Barcos.h" // Necesitamos esto para que el mapa conozca el struct Barco
+
 typedef enum {
-    VACIO,    // Casilla sin explorar y sin barco
-    AGUA,     // Disparo que cayó al agua
-    TOCADO,   // Impacto exitoso en un barco
-    HUNDIDO   // Barco completamente destruido
+    VACIO,    
+    AGUA,     
+    TOCADO,   
+    HUNDIDO   
 } EstadoCasilla;
 
-// Prototipos de las funciones para manejar la memoria y dibujar el mapa
 char **crearMapa(int filas, int columnas);
 void liberarMapa(char **mar, int filas);
-void imprimirMapa(char **mar, int filas, int columnas);
+
+// Actualizamos esta función para que reciba la flota (usamos un puntero para aceptar NULL al inicio)
+void imprimirMapa(char **mar, int filas, int columnas, Barco *flota);
 
 #endif

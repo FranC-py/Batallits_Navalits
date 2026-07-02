@@ -9,7 +9,7 @@ int main() {
 
     printf("=== BIENVENIDO A BATALLA NAVAL ===\n");
     
-    // El programa solicita definir las dimensiones del mar (tablero) [cite: 14]
+    // El programa solicita definir las dimensiones del mar (tablero)
     printf("Ingrese la cantidad de filas (N): ");
     if (scanf("%d", &filas) != 1 || filas <= 0) {
         printf("Error: Ingreso invalido para las filas.\n");
@@ -24,10 +24,10 @@ int main() {
 
     printf("\nAsignando memoria dinamicamente para un tablero de %dx%d...\n", filas, columnas);
     
-    // 1. Creamos el mapa utilizando el puntero doble y malloc [cite: 17]
+    // 1. Creamos el mapa utilizando el puntero doble y malloc
     char **miMapa = crearMapa(filas, columnas);
 
-    // 2. Crear y posicionar la flota del Jugador de manera aleatoria [cite: 20]
+    // 2. Crear y posicionar la flota del Jugador de manera aleatoria
     Barco flotaJugador[CANTIDAD_BARCOS];
     inicializarFlota(flotaJugador);
     colocarBarcosAleatoriamente(filas, columnas, flotaJugador);
@@ -38,17 +38,18 @@ int main() {
     int filaDisparo, colDisparo;
     int juegoTerminado = 0;
 
-    // La partida termina cuando uno de los jugadores pierde todos sus barcos [cite: 49]
+    // La partida termina cuando uno de los jugadores pierde todos sus barcos
     while (!juegoTerminado) {
         printf("\n");
-        imprimirMapa(miMapa, filas, columnas); // Mostramos el tablero actualizado
+        // CORREGIDO: Pasamos flotaJugador para que se puedan dibujar las 'B'
+        imprimirMapa(miMapa, filas, columnas, flotaJugador); 
         
-        // El jugador ingresa una coordenada de disparo [cite: 33]
+        // El jugador ingresa una coordenada de disparo
         printf("\nIngrese coordenada del disparo enemigo (ej. B4): ");
         scanf("%s", entradaDisparo);
 
         if (parsearCoordenada(entradaDisparo, &filaDisparo, &colDisparo, filas, columnas)) {
-            // Mostrar el resultado: AGUA, TOCADO o HUNDIDO [cite: 39]
+            // Mostrar el resultado: AGUA, TOCADO o HUNDIDO
             EstadoCasilla resultado = evaluarDisparo(miMapa, flotaJugador, filaDisparo, colDisparo);
             
             if (resultado == AGUA) {
@@ -61,9 +62,10 @@ int main() {
 
             // Verificar si el jugador actual perdió toda su flota
             if (flotaDestruida(flotaJugador)) {
-                // Mensaje exacto requerido por la consigna [cite: 50, 51]
+                // Mensaje exacto requerido por la consigna
                 printf("\n¡ELIMINADO! Todos tus barcos han sido hundidos. El jugador contrario gana la partida.\n");
-                imprimirMapa(miMapa, filas, columnas); // Imprimimos el mapa final
+                // CORREGIDO: Pasamos flotaJugador aquí también para el mapa final
+                imprimirMapa(miMapa, filas, columnas, flotaJugador); 
                 juegoTerminado = 1;
             }
         } else {
@@ -71,7 +73,7 @@ int main() {
         }
     }
 
-    // 4. Al finalizar, liberamos toda la memoria con free [cite: 18]
+    // 4. Al finalizar, liberamos toda la memoria con free
     printf("\nLiberando memoria antes de salir...\n");
     liberarMapa(miMapa, filas);
     
