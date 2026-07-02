@@ -37,6 +37,7 @@ _Bool estanTodosHundidos(barco flota[5]);
 int hostearPartida(int puerto);
 int unirsePartida(char *ip_servidor, int puerto);
 void mostrarIPLocal();
+void recibirAtaque(tablero *t, barco *flota, int mi_socket);
 
 
 int main() {
@@ -93,8 +94,28 @@ int main() {
     limpiarTerminal(0, 0);
     
     while (estanTodosHundidos(flota) == false) {
-        imprimirTablero(&miTablero);
-        disparar(&miTablero, flota, socket_id);
+        _Bool mi_turno = true;
+        if (modo == 3) {
+            mi_turno = false; // El Cliente empieza esperando el ataque
+        }
+
+        while (estanTodosHundidos(flota) == false) {
+            limpiarTerminal(0, 0);
+            printf("--- RADAR DE TIRO ---\n");
+            imprimirTablero(&miTablero);
+        
+            if (mi_turno == true) {
+                if(socket_id > 0) printf("\n>>> ¡ES TU TURNO DE ATACAR! <<<\n");
+                disparar(&miTablero, flota, socket_id);
+            } else {
+                recibirAtaque(&miTablero, flota, socket_id);
+            }
+        
+            // Si estamos jugando online, nos pasamos el turno
+            if (socket_id != -1) {
+                mi_turno = !mi_turno; 
+            }
+        }
     }
     
     printf("\nELIMINADO! Todos tus barcos se hundieron. Tu rival te ha destrozado.\n");
@@ -485,21 +506,18 @@ void disparar(tablero *t, barco *flota, int mi_socket) {
             }
         }
     } else {
-        //MODO ONLINE
+        // MODO ONLINE
         send(mi_socket, entrada, sizeof(entrada), 0);
         char respuesta[2];
         printf("Esperando confirmacion del enemigo...\n");
         recv(mi_socket, respuesta, sizeof(respuesta), 0);
         
         if (respuesta[0] == 'A') {
-            printf("\n¡AGUA!\n");
-            t->mar[y][x] = 'O';
+            printf("\n¡Radar: AGUA!\n");
         } else if (respuesta[0] == 'T') {
-            printf("\n¡TOCADO!\n");
-            t->mar[y][x] = 'X';
+            printf("\n¡Radar: IMPACTO CONFIRMADO (Tocado)!\n");
         } else if (respuesta[0] == 'H') {
-            printf("\n¡HUNDIDO!\n");
-            t->mar[y][x] = 'X';
+            printf("\n¡Radar: BARCO DESTRUIDO (Hundido)!\n");
         }
         sleep(3);
     }
@@ -633,4 +651,67 @@ void mostrarIPLocal() {
     }
     
     close(sock);
+}
+
+void recibirAtaque(tablero *t, barco *flota, int mi_socket) {
+    char buffer[10];
+    char respuesta[2] = "A"; 
+    unsigned int x, y;
+
+    printf("\n>>> ESPERANDO ATAQUE ENEMIGO...\n");
+    
+    // El programa se congela acá hasta que llegue el misil por la red
+    recv(mi_socket, buffer, sizeof(buffer), 0);
+    
+    if (strcmp(buffer, "RINDIO") == 0) {
+        limpiarTerminal(0,0);
+        printf("\n¡VICTORIA! El enemigo se ha rendido.\n");
+        sleep(4);
+        exit(0);
+    }
+    
+    traducirCoordenada(buffer, &x, &y);
+    printf("\n¡Alarma! El enemigo disparó a la coordenada %s\n", buffer);
+    sleep(2);
+    
+    // Evaluamos el daño en NUESTRO tablero
+    if (t->mar[y][x] == VACIO) {
+        printf("Reporte: ¡Cayo en el AGUA!\n");
+        t->mar[y][x] = AGUA;
+        respuesta[0] = 'A';
+    } else if (t->mar[y][x] == AGUA || t->mar[y][x] == TOCADO) {
+        printf("Reporte: Disparó donde ya había atacado.\n");
+        respuesta[0] = 'A';
+    } else {
+        t->mar[y][x] = TOCADO;
+        respuesta[0] = 'T'; // Por defecto tocado, ahora comprobamos si se hundió
+        
+        for (int i = 0; i < 5; i++) {
+            _Bool impactoAcertado = false;
+            if (flota[i].orientacion == 1) {
+                if ((int)x == flota[i].posicion_x && (int)y >= flota[i].posicion_y && (int)y < (flota[i].posicion_y + (int)flota[i].casillas)) {
+                    impactoAcertado = true;
+                }
+            } else {
+                if ((int)y == flota[i].posicion_y && (int)x >= flota[i].posicion_x && (int)x < (flota[i].posicion_x + (int)flota[i].casillas)) {
+                    impactoAcertado = true;
+                }
+            }
+
+            if (impactoAcertado) {
+                flota[i].impactos++;
+                if (flota[i].impactos == flota[i].casillas) {
+                    respuesta[0] = 'H';
+                }
+                break;
+            }
+        }
+        
+        if (respuesta[0] == 'T') printf("Reporte: ¡Nos han TOCADO un barco!\n");
+        if (respuesta[0] == 'H') printf("Reporte: ¡ATENCIÓN! ¡Nos han HUNDIDO un barco!\n");
+    }
+    
+    // Le devolvemos el resultado al radar del enemigo
+    send(mi_socket, respuesta, sizeof(respuesta), 0);
+    sleep(3);
 }

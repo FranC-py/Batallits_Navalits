@@ -15,4 +15,11 @@ typedef struct{
     char **mar;
 } tablero;
 
+typedef enum {
+    VACIO = '~',
+    AGUA = 'O',
+    TOCADO = 'X',
+    HUNDIDO = 'H'
+} EstadoCasilla;
+
 #endif
