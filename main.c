@@ -10,6 +10,12 @@
 #include <time.h> //Este es para poder hacer los valores aleatorios
 #include <string.h> //este me deja comparar strings para el caso de escribir "salir"
 
+//librerias para usar el online
+
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+
 #include "main.h"
 
 void pedirDimesiones(tablero *t);
@@ -26,8 +32,12 @@ _Bool elegirModoDeColocacionDeBarcos();
 void gestionarModoDeColocacionDeBarcos(tablero *t, barco *flota);
 void posicionarBarcosManual(tablero *t, barco *flota);
 void traducirCoordenada(char entrada[], unsigned int *x, unsigned int *y);
-void disparar(tablero *t, barco *flota);
+void disparar(tablero *t, barco *flota, int mi_socket);
 _Bool estanTodosHundidos(barco flota[5]);
+int hostearPartida(int puerto);
+int unirsePartida(char *ip_servidor, int puerto);
+void mostrarIPLocal();
+
 
 int main() {
 
@@ -37,27 +47,58 @@ int main() {
     tablero miTablero;
     barco flota[5];
 
+    int socket_id = -1;
+    unsigned int modo;
+
     iniciarRelojAleatorio();
 
     limpiarTerminal(0, 1);
+    do{
+        printf("--- BIENVENIDO A LA BATALLA NAVAL ---\n");
+        printf("1. Modo Local (Offline)\n");
+        printf("2. Crear Partida (Host)\n");
+        printf("3. Unirse a Partida (Cliente)\n");
+        printf("Opcion: ");
+        scanf("%u", &modo);
 
+        if(modo > 3 || modo < 1){
+            limpiarTerminal(0, 0);
+            printf("Error: Opcion invalida\n");
+            limpiarTerminal(3, 0);
+        }
+    }while(modo > 3 || modo < 1);
+
+    if (modo == 2) {
+        limpiarTerminal(0, 0);
+        mostrarIPLocal();
+        socket_id = hostearPartida(8080);
+    } else if (modo == 3) {
+        char ip[20];
+        int puerto_ingresado;
+        printf("Ingrese IP del host: ");
+        scanf("%19s", ip);
+        printf("Ingrese el PUERTO del host: ");
+        scanf("%d", &puerto_ingresado);
+        socket_id = unirsePartida(ip, puerto_ingresado);
+    }
+
+    limpiarTerminal(0, 0);
     pedirDimesiones(&miTablero);
     miTablero.mar = armadoDeTablero(&miTablero);
     //imprimirTablero(&miTablero);
     //se crean los barcos en una lista
+    limpiarTerminal(0, 0);
     definirBarcos(flota);
-
     gestionarModoDeColocacionDeBarcos(&miTablero, flota);
-    
-    posicionarBarquito(flota[0], &miTablero);
-    limpiarTerminal(10, 0);
+    limpiarTerminal(0, 0);
     
     while (estanTodosHundidos(flota) == false) {
         imprimirTablero(&miTablero);
-        disparar(&miTablero, flota);
+        disparar(&miTablero, flota, socket_id);
     }
     
     printf("\nELIMINADO! Todos tus barcos se hundieron. Tu rival te ha destrozado.\n");
+    if (socket_id != -1) close(socket_id);
     sleep(2);
 
     liberarTablero(&miTablero);
@@ -367,19 +408,23 @@ void traducirCoordenada(char entrada[], unsigned int *x, unsigned int *y) {
     *y = atoi(&entrada[1]) - 1;
 }
 
-void disparar(tablero *t, barco *flota) {
-    char entrada[6];
+void disparar(tablero *t, barco *flota, int mi_socket) {
+    char entrada[10];
     unsigned int x, y;
     _Bool disparoValido = false;
 
     do {
         printf("\nIngrese coordenada de disparo (Ej: B4) o 'salir' para rendirse: ");
-        scanf("%5s", entrada);
+        scanf("%9s", entrada);
 
         if (strcmp(entrada, "salir") == 0 || strcmp(entrada, "SALIR") == 0) {
-            limpiarTerminal(0,0);
+            if (mi_socket != -1) {
+                char mensaje_rendicion[] = "RINDIO";
+                send(mi_socket, mensaje_rendicion, sizeof(mensaje_rendicion), 0);
+            }
+            limpiarTerminal(0, 0);
             printf("Abortando mision...\n");
-            liberarTablero(t); 
+            liberarTablero(t);
             sleep(2);
             exit(0);
         }
@@ -387,7 +432,8 @@ void disparar(tablero *t, barco *flota) {
         traducirCoordenada(entrada, &x, &y);
 
         if (x >= t->columnas || y >= t->filas) {
-            printf("Error: Coordenada fuera del mapa. Valores validos -> X: 'a'-'%c' y 'A'-'%c' | Y: del 1 al %u\n", ('a' + (t->columnas - 1)), ('A' + (t->columnas - 1)), t->filas);
+            printf("Error: Coordenada fuera del mapa. Valores validos -> X: 'a'-'%c' y 'A'-'%c' | Y: del 1 al %u\n", 
+                  ('a' + (t->columnas - 1)), ('A' + (t->columnas - 1)), t->filas);
             sleep(2);
             continue;
         }
@@ -401,44 +447,61 @@ void disparar(tablero *t, barco *flota) {
         disparoValido = true;
     } while (disparoValido == false);
 
-
     limpiarTerminal(0, 0);
     printf("Disparando a %s...\n", entrada);
     sleep(1);
 
-    if (t->mar[y][x] == '~') {
-        printf("\nAGUA!\n");
-        t->mar[y][x] = 'O'; // 'O' es agua
-        sleep(2);
-    } else {
-        t->mar[y][x] = 'X'; // 'X' representa que le pegue a un barco
-
-        for (int i = 0; i < 5; i++) {
-            _Bool impactoAcertado = false;
-            
-            if (flota[i].orientacion == 1) {
-                if ((int) x == flota[i].posicion_x && (int) y >= flota[i].posicion_y && (int) y < (flota[i].posicion_y + (int) flota[i].casillas)) {
-                    impactoAcertado = true;
-                }
-            } else {
-                if ((int) y == flota[i].posicion_y && (int) x >= flota[i].posicion_x && (int) x < (flota[i].posicion_x + (int) flota[i].casillas)) {
-                    impactoAcertado = true;
-                }
-            }
-
-            if (impactoAcertado == true) {
-                flota[i].impactos++;
+    if (mi_socket == -1) {
+        //MODO OFFLINE
+        if (t->mar[y][x] == '~') {
+            printf("\n¡AGUA!\n");
+            t->mar[y][x] = 'O';
+            sleep(2);
+        } else {
+            t->mar[y][x] = 'X';
+            for (int i = 0; i < 5; i++) {
+                _Bool impactoAcertado = false;
                 
-                if (flota[i].impactos == flota[i].casillas) {
-                    printf("\nHUNDIDO! Hundiste el barco de tamano %u.\n", flota[i].casillas);
+                if (flota[i].orientacion == 1) {
+                    if ((int)x == flota[i].posicion_x && (int)y >= flota[i].posicion_y && (int)y < (flota[i].posicion_y + (int)flota[i].casillas)) {
+                        impactoAcertado = true;
+                    }
                 } else {
-                    printf("\nTOCADO!\n");
+                    if ((int)y == flota[i].posicion_y && (int)x >= flota[i].posicion_x && (int)x < (flota[i].posicion_x + (int)flota[i].casillas)) {
+                        impactoAcertado = true;
+                    }
                 }
-                
-                sleep(3);
-                break;  //cuando se encuetra el barco sale del for
+
+                if (impactoAcertado == true) {
+                    flota[i].impactos++;
+                    if (flota[i].impactos == flota[i].casillas) {
+                        printf("\n¡HUNDIDO! Hundiste el barco de tamano %u.\n", flota[i].casillas);
+                    } else {
+                        printf("\n¡TOCADO!\n");
+                    }
+                    sleep(3);
+                    break;
+                }
             }
         }
+    } else {
+        //MODO ONLINE
+        send(mi_socket, entrada, sizeof(entrada), 0);
+        char respuesta[2];
+        printf("Esperando confirmacion del enemigo...\n");
+        recv(mi_socket, respuesta, sizeof(respuesta), 0);
+        
+        if (respuesta[0] == 'A') {
+            printf("\n¡AGUA!\n");
+            t->mar[y][x] = 'O';
+        } else if (respuesta[0] == 'T') {
+            printf("\n¡TOCADO!\n");
+            t->mar[y][x] = 'X';
+        } else if (respuesta[0] == 'H') {
+            printf("\n¡HUNDIDO!\n");
+            t->mar[y][x] = 'X';
+        }
+        sleep(3);
     }
 }
 
@@ -450,4 +513,124 @@ _Bool estanTodosHundidos(barco flota[5]) {
     }
     
     return true; 
+}
+
+int hostearPartida(int puerto_inicial) {
+    int socket_servidor, socket_cliente;
+    struct sockaddr_in direccion_servidor, direccion_cliente;
+    socklen_t tamano_cliente = sizeof(direccion_cliente);
+    int puerto_actual = puerto_inicial;
+
+    // 1. Se crea el socket TCP
+    socket_servidor = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_servidor == -1) {
+        printf("Error: No se pudo crear el socket.\n");
+        exit(1);
+    }
+
+    // --- EL SECRETO: Limpiar la memoria de la estructura ---
+    memset(&direccion_servidor, 0, sizeof(direccion_servidor));
+
+    // 2. Bucle para buscar un puerto disponible
+    while (1) {
+        direccion_servidor.sin_family = AF_INET;
+        direccion_servidor.sin_addr.s_addr = INADDR_ANY;
+        direccion_servidor.sin_port = htons(puerto_actual);
+
+        if (bind(socket_servidor, (struct sockaddr *)&direccion_servidor, sizeof(direccion_servidor)) == 0) {
+            break; // Exito
+        }
+        
+        puerto_actual++;
+        if (puerto_actual > 65535) {
+            printf("Error fatal: Sin puertos disponibles.\n");
+            exit(1);
+        }
+    }
+
+    listen(socket_servidor, 1);
+    
+    printf("\n=================================================\n");
+    printf("  SALA CREADA CON EXITO\n");
+    printf("  Puerto asignado: %d\n", puerto_actual);
+    printf("  Esperando a que el Jugador 2 se conecte...\n");
+    printf("=================================================\n");
+
+    // Limpiamos también la del cliente por las dudas
+    memset(&direccion_cliente, 0, sizeof(direccion_cliente));
+    socket_cliente = accept(socket_servidor, (struct sockaddr *)&direccion_cliente, &tamano_cliente);
+    
+    if (socket_cliente < 0) {
+        printf("Error: Fallo al aceptar la conexion.\n");
+        exit(1);
+    }
+
+    printf("¡Jugador 2 conectado!\n");
+    sleep(2);
+    
+    return socket_cliente;
+}
+
+int unirsePartida(char *ip_servidor, int puerto) {
+    int socket_cliente;
+    struct sockaddr_in direccion_servidor;
+
+    socket_cliente = socket(AF_INET, SOCK_STREAM, 0);
+    if (socket_cliente == -1) {
+        printf("Error: No se pudo crear el socket.\n");
+        exit(1);
+    }
+
+    // --- EL SECRETO: Limpiar la memoria antes de conectarse ---
+    memset(&direccion_servidor, 0, sizeof(direccion_servidor));
+
+    direccion_servidor.sin_family = AF_INET;
+    direccion_servidor.sin_port = htons(puerto);
+    direccion_servidor.sin_addr.s_addr = inet_addr(ip_servidor); 
+
+    limpiarTerminal(0,0);
+    printf("Conectando con la base enemiga en IP %s y Puerto %d...\n", ip_servidor, puerto);
+
+    if (connect(socket_cliente, (struct sockaddr *)&direccion_servidor, sizeof(direccion_servidor)) < 0) {
+        printf("Error: Fallo la conexion. Revisa que el Host este esperando.\n");
+        exit(1);
+    }
+
+    printf("¡Conectado exitosamente a la partida!\n");
+    sleep(2);
+    
+    return socket_cliente;
+}
+
+void mostrarIPLocal() {
+    // se crea un socket UDP temporal
+    int sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sock < 0) {
+        printf("No se pudo detectar la IP. Usa 'localhost' o 127.0.0.1 si estas en la misma PC.\n");
+        return;
+    }
+
+    struct sockaddr_in serv;
+    memset(&serv, 0, sizeof(serv));
+    serv.sin_family = AF_INET;
+    serv.sin_addr.s_addr = inet_addr("8.8.8.8"); // DNS de Google
+    serv.sin_port = htons(53);
+
+    // Simulamos una conexión para que el SO nos asigne nuestra IP de red local
+    if (connect(sock, (const struct sockaddr*)&serv, sizeof(serv)) < 0) {
+        printf("Sin conexion a red. Usa '127.0.0.1' para jugar en esta misma computadora.\n");
+        close(sock);
+        return;
+    }
+
+    struct sockaddr_in name;
+    socklen_t namelen = sizeof(name);
+    if (getsockname(sock, (struct sockaddr*)&name, &namelen) == 0) {
+        printf("\n=================================================\n");
+        printf("  TU IP LOCAL ES: %s\n", inet_ntoa(name.sin_addr));
+        printf("  Dictar este numero al Jugador 2\n");
+        printf("=================================================\n\n");
+    }
+    
+    close(sock);
 }
