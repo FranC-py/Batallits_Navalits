@@ -1,6 +1,6 @@
 # Batallits_Navalits
-//gcc Main/main.c Mapa/Mapa.c Barcos/Barcos.c Juego/Juego.c -o batalla_naval
-//./batallaNaval
+gcc Main/main.c Mapa/Mapa.c Barcos/Barcos.c Juego/Juego.c Online/Online.c -o batalla_naval
+./batalla_naval
 
 explicacion de porque es se compila asi:
  gcc: es el compilador, main.c: es el archivo a compilar, -o: bandera -o(de output) le dice al compilador que cree un archivo que me de una salida y ademas se llame batllaNaval
